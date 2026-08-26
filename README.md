@@ -8,7 +8,8 @@ application design.
 | **PersonnelManager** | A layered, SOLID, **service-based** in-memory CRUD app for managing people, with validation, JSON file persistence, and cross-cutting logging. |
 | **LogAnalyzer** | A console tool that **watches a folder** for new/changed `.log` files, summarizes them by severity, and can generate sample logs for testing. |
 
-Both are console apps. There are two xUnit test projects with **60 passing tests** between them.
+Both are console apps wired with **dependency injection** (`Microsoft.Extensions.DependencyInjection`).
+There are two xUnit test projects with **65 passing tests** between them.
 
 ---
 
@@ -62,17 +63,21 @@ PersonnelManager.sln
 │   │   └── personnel/                # PersonnelService, validator, mapping
 │   ├── infrastructure/               # in-memory repo, JSON backup, file logger
 │   ├── presentation/                 # ConsoleApp + display extensions
-│   └── Program.cs                    # composition root
-├── PersonnelManager.Tests/           # 50 xUnit tests
+│   ├── composition/                  # DI registration (AddPersonnelManager)
+│   └── Program.cs                    # composition root (builds the container)
+├── PersonnelManager.Tests/           # 54 xUnit tests
 ├── LogAnalyzer/                      # log-watching utility
 │   ├── Domain/                       # LogLevel, LogEntry, LogSummary
-│   ├── LogLineParser.cs
+│   ├── Abstractions.cs               # ILogFileAnalyzer, ISampleLogGenerator, ISummaryWriter
+│   ├── LogLineParser.cs              # pure static parser
 │   ├── LogFileAnalyzer.cs
 │   ├── SampleLogGenerator.cs
+│   ├── ConsoleSummaryWriter.cs
 │   ├── FolderLogWatcher.cs
-│   ├── SummaryPrinter.cs
-│   └── Program.cs                    # CLI: generate | watch | analyze | demo
-└── LogAnalyzer.Tests/                # 10 xUnit tests
+│   ├── AnalyzerApp.cs                # command handlers (injected services)
+│   ├── ServiceCollectionExtensions.cs
+│   └── Program.cs                    # CLI dispatch (builds the container)
+└── LogAnalyzer.Tests/                # 11 xUnit tests
 ```
 
 ---
@@ -122,9 +127,11 @@ flowchart TD
     class P pres
 ```
 
-The **composition root** (`Program.cs`) is the only place that knows concrete types: it builds the
-repository, validator, logger, service, and backup — wrapping the service and backup in logging
-decorators — then hands the abstractions to `ConsoleApp`.
+Wiring is done with **dependency injection** (`Microsoft.Extensions.DependencyInjection`).
+`AddPersonnelManager` (in `composition/`) registers each abstraction's implementation — including
+the two logging **decorators**, registered as factories that wrap the concrete service and backup.
+`Program.cs` is then tiny: build the `ServiceProvider`, resolve `ConsoleApp`, run. It's the only
+place that names concrete types, and the container resolves each constructor's dependencies for it.
 
 ### Class diagram — domain & persistence
 
@@ -281,59 +288,56 @@ on `args`).
 
 ### Class diagram
 
+The command handlers (`AnalyzerApp`) depend on three injected interfaces. `LogLineParser` stays a
+pure static function — nothing to inject.
+
 ```mermaid
 classDiagram
-    class LogLevel {
-      <<enum>>
-      Trace
-      Debug
-      Info
-      Warning
-      Error
-      Fatal
+    class ILogFileAnalyzer {
+      <<interface>>
+      +AnalyzeAsync(path) Task~LogSummary~
     }
-    class LogEntry {
-      <<record>>
-      +DateTime Timestamp
-      +LogLevel Level
-      +string Message
+    class ISampleLogGenerator {
+      <<interface>>
+      +GenerateAsync(folder, count) Task
     }
-    class LogSummary {
-      <<record>>
-      +string FileName
-      +int ParsedLines
-      +int UnparsedLines
-      +IReadOnlyDictionary CountsByLevel
-      +int ErrorCount
+    class ISummaryWriter {
+      <<interface>>
+      +Write(LogSummary)
     }
+    class LogFileAnalyzer
+    class SampleLogGenerator
+    class ConsoleSummaryWriter
+    class AnalyzerApp
     class LogLineParser {
       <<static>>
       +TryParse(string, out LogEntry) bool
-    }
-    class LogFileAnalyzer {
-      <<static>>
-      +AnalyzeAsync(path) Task~LogSummary~
-    }
-    class SampleLogGenerator {
-      <<static>>
-      +GenerateAsync(folder, count) Task
     }
     class FolderLogWatcher {
       -FileSystemWatcher watcher
       +Start()
     }
-    class SummaryPrinter {
-      <<static>>
-      +Print(LogSummary)
+    class LogEntry {
+      <<record>>
+      +LogLevel Level
+      +string Message
+    }
+    class LogSummary {
+      <<record>>
+      +int ParsedLines
+      +int ErrorCount
     }
 
-    LogLineParser --> LogEntry
-    LogEntry --> LogLevel
+    ILogFileAnalyzer <|.. LogFileAnalyzer
+    ISampleLogGenerator <|.. SampleLogGenerator
+    ISummaryWriter <|.. ConsoleSummaryWriter
+    AnalyzerApp --> ILogFileAnalyzer
+    AnalyzerApp --> ISampleLogGenerator
+    AnalyzerApp --> ISummaryWriter
+    AnalyzerApp ..> FolderLogWatcher : creates
     LogFileAnalyzer --> LogLineParser
     LogFileAnalyzer --> LogSummary
-    LogSummary --> LogLevel
-    FolderLogWatcher ..> LogFileAnalyzer : callback
-    SummaryPrinter --> LogSummary
+    LogLineParser --> LogEntry
 ```
 
 ### Sequence — watch & analyze
@@ -342,19 +346,21 @@ classDiagram
 sequenceDiagram
     participant FS as File system
     participant W as FolderLogWatcher
+    participant App as AnalyzerApp
     participant An as LogFileAnalyzer
     participant Pa as LogLineParser
-    participant Pr as SummaryPrinter
+    participant Wr as ConsoleSummaryWriter
 
     FS->>W: file created / changed (*.log)
     W->>W: debounce (ignore repeat events < 400ms)
-    W->>An: AnalyzeAsync(path)
+    W->>App: callback(path)
+    App->>An: AnalyzeAsync(path)
     loop each line
         An->>Pa: TryParse(line)
         Pa-->>An: LogEntry or false
     end
-    An-->>W: LogSummary
-    W->>Pr: Print(summary)
+    An-->>App: LogSummary
+    App->>Wr: Write(summary)
 ```
 
 ---
@@ -391,7 +397,9 @@ This solution was built lesson-by-lesson; nearly every construct maps to a real 
   `LoggingBackupDecorator`) — Open/Closed in action.
 - **Repository pattern**, generic and reusable.
 - **Result type** instead of exceptions for expected failures.
-- **Composition root** for wiring; no service locator, no magic.
+- **Dependency injection** (`Microsoft.Extensions.DependencyInjection`) — a `ServiceCollection`
+  describes the graph and the container resolves each constructor's dependencies; decorators are
+  registered as factory wrappers. Wiring is verified by tests.
 - **File watching** with `FileSystemWatcher` (debouncing, shared-read handles).
 
 ---
@@ -404,8 +412,8 @@ dotnet test          # runs both test projects
 
 | Test project | Tests | Focus |
 |---|---|---|
-| `PersonnelManager.Tests` | 50 | service, validator, repository, backup, logging decorators, extensions, console flows |
-| `LogAnalyzer.Tests` | 10 | line parser (valid / aliases / malformed), file analyzer (counts, time span, errors) |
+| `PersonnelManager.Tests` | 54 | service, validator, repository, backup, logging decorators, extensions, console flows, DI registration |
+| `LogAnalyzer.Tests` | 11 | line parser (valid / aliases / malformed), file analyzer (counts, time span, errors), DI registration |
 
 Tests use the real in-memory implementations as honest test doubles where possible, plus small
 hand-rolled fakes (recording logger, throwing service/backup) for edge cases — no mocking framework.

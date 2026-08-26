@@ -5,6 +5,7 @@ namespace LogAnalyzer.Tests;
 
 public class LogFileAnalyzerTests : IDisposable
 {
+    private readonly ILogFileAnalyzer _analyzer = new LogFileAnalyzer();
     private readonly string _path = Path.Combine(Path.GetTempPath(), $"la-{Guid.NewGuid():N}.log");
 
     [Fact]
@@ -19,7 +20,7 @@ public class LogFileAnalyzerTests : IDisposable
             not a valid line
             """);
 
-        var summary = await LogFileAnalyzer.AnalyzeAsync(_path);
+        var summary = await _analyzer.AnalyzeAsync(_path);
 
         Assert.Equal(5, summary.TotalLines);
         Assert.Equal(4, summary.ParsedLines);
@@ -38,7 +39,7 @@ public class LogFileAnalyzerTests : IDisposable
             2026-08-26 09:10:00.000 [Info] end
             """);
 
-        var summary = await LogFileAnalyzer.AnalyzeAsync(_path);
+        var summary = await _analyzer.AnalyzeAsync(_path);
 
         Assert.Equal(new DateTime(2026, 8, 26, 9, 0, 0), summary.First);
         Assert.Equal(new DateTime(2026, 8, 26, 9, 10, 0), summary.Last);

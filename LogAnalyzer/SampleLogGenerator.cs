@@ -4,7 +4,7 @@ using LogAnalyzer.Domain;
 namespace LogAnalyzer;
 
 /// <summary>Writes synthetic .log files (matching the analyzer's format) into a target folder.</summary>
-public static class SampleLogGenerator
+public sealed class SampleLogGenerator : ISampleLogGenerator
 {
     private static readonly string[] Services = ["auth", "billing", "orders", "search", "gateway"];
     private static readonly string[] Messages =
@@ -14,7 +14,7 @@ public static class SampleLogGenerator
         "connection reset by peer", "record not found", "rate limit exceeded",
     ];
 
-    public static async Task<IReadOnlyList<string>> GenerateAsync(
+    public async Task<IReadOnlyList<string>> GenerateAsync(
         string folder, int fileCount = 10, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(folder);

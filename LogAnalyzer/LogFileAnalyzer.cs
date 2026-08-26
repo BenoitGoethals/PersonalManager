@@ -3,9 +3,9 @@ using LogAnalyzer.Domain;
 namespace LogAnalyzer;
 
 /// <summary>Reads a log file and summarizes it. Pure I/O + counting, no console concerns.</summary>
-public static class LogFileAnalyzer
+public sealed class LogFileAnalyzer : ILogFileAnalyzer
 {
-    public static async Task<LogSummary> AnalyzeAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<LogSummary> AnalyzeAsync(string path, CancellationToken cancellationToken = default)
     {
         var counts = new Dictionary<LogLevel, int>();
         var recentErrors = new List<string>();
