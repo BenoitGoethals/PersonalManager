@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using PersonnelManager.Application.Abstractions;
 using PersonnelManager.Composition;
+using PersonnelManager.Infrastructure;
+using PersonnelManager.Infrastructure.Persistence;
 using PersonnelManager.Presentation;
 
 namespace PersonnelManager.Tests;
@@ -48,5 +50,25 @@ public class ServiceRegistrationTests
         var second = provider.GetRequiredService<IPersonalRepository>();
 
         Assert.Same(first, second); // one shared in-memory store for the whole run
+    }
+
+    [Fact]
+    public void WithoutConnectionString_UsesInMemoryStore()
+    {
+        using var provider = BuildProvider();
+
+        Assert.IsType<InMemoryPersonalRepository>(provider.GetRequiredService<IPersonalRepository>());
+    }
+
+    [Fact]
+    public void WithConnectionString_UsesEfPostgresStore()
+    {
+        // A placeholder connection string is enough: resolving the repository does not open a
+        // connection (Npgsql connects lazily on the first query).
+        using var provider = new ServiceCollection()
+            .AddPersonnelManager(Path.GetTempPath(), "Host=localhost;Database=personnel;Username=postgres")
+            .BuildServiceProvider();
+
+        Assert.IsType<EfPersonalRepository>(provider.GetRequiredService<IPersonalRepository>());
     }
 }

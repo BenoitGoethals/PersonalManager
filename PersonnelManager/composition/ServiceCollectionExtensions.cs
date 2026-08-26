@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PersonnelManager.Application.Abstractions;
 using PersonnelManager.Application.Personnel;
 using PersonnelManager.Infrastructure;
+using PersonnelManager.Infrastructure.Persistence;
 using PersonnelManager.Presentation;
 
 namespace PersonnelManager.Composition;
@@ -13,10 +15,24 @@ namespace PersonnelManager.Composition;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddPersonnelManager(this IServiceCollection services, string dataDirectory)
+    // When 'connectionString' is supplied, personnel are stored in PostgreSQL via EF Core; otherwise
+    // an in-memory store is used. This is the whole point of the IPersonalRepository abstraction —
+    // swapping the store is one branch here, and nothing above infrastructure changes.
+    public static IServiceCollection AddPersonnelManager(
+        this IServiceCollection services, string dataDirectory, string? connectionString = null)
     {
-        // Infrastructure — the in-memory store is a singleton because it IS the data for the run.
-        services.AddSingleton<IPersonalRepository, InMemoryPersonalRepository>();
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            // In-memory store — a singleton because it IS the data for the run.
+            services.AddSingleton<IPersonalRepository, InMemoryPersonalRepository>();
+        }
+        else
+        {
+            // PostgreSQL via EF Core. The factory hands out a short-lived DbContext per operation.
+            services.AddDbContextFactory<PersonnelDbContext>(options => options.UseNpgsql(connectionString));
+            services.AddSingleton<IPersonalRepository, EfPersonalRepository>();
+        }
+
         services.AddSingleton<IAppLogger>(_ => new FileLogger(Path.Combine(dataDirectory, "personnel.log")));
 
         // Application
