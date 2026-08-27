@@ -1,5 +1,9 @@
 # PersonnelManager & LogAnalyzer
 
+[![CI](https://github.com/BenoitGoethals/PersonalManager/actions/workflows/ci.yml/badge.svg)](https://github.com/BenoitGoethals/PersonalManager/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-10-512BD4.svg)](https://dotnet.microsoft.com/)
+
 A **.NET 10 / C# 14** solution built as a hands-on tour of modern C# and clean application design.
 The core is a class library shared by **two interchangeable front-ends** — a console app and an
 **Avalonia** desktop app — plus a separate log-watching utility.
@@ -31,6 +35,8 @@ Three xUnit test projects hold **70 passing tests**.
   - [Sequence — watch & analyze](#sequence--watch--analyze)
 - [Knowledge / concepts covered](#knowledge--concepts-covered)
 - [Testing](#testing)
+- [Continuous integration](#continuous-integration)
+- [License](#license)
 
 ---
 
@@ -466,6 +472,27 @@ dotnet test          # runs all three test projects
 
 Tests use the real in-memory implementations as honest test doubles where possible, plus small
 hand-rolled fakes (recording logger, throwing service/backup) for edge cases — no mocking framework.
+
+---
+
+## Continuous integration
+
+Every push and pull request to `main` runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml),
+which has three jobs:
+
+| Job | What it does |
+|---|---|
+| **Build · Test · Coverage** | `dotnet build`, then `dotnet test` with a TRX **test report** (published as a check run) and **code coverage** collected via coverlet; a ReportGenerator summary is written to the run summary and the HTML report is uploaded as an artifact. |
+| **Dependency vulnerability scan** | `dotnet list package --vulnerable --include-transitive` — fails the build if any direct or transitive NuGet package has a known security advisory. |
+| **CodeQL security analysis** | GitHub **CodeQL** static analysis (SAST) for C#; findings surface under the repo's *Security → Code scanning* tab. |
+
+Coverage and test-result artifacts are downloadable from each run.
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Benoit Goethals.
 
 ---
 

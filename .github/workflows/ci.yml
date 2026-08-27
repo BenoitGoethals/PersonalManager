@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  CONFIGURATION: 'Release'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build, run tests, publish a test report, and produce a coverage report.
+  # ---------------------------------------------------------------------------
+  build-test:
+    name: Build · Test · Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write        # dorny/test-reporter publishes a check run
+      pull-requests: write # coverage summary comment on PRs
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }}
+
+      - name: Test (with code coverage)
+        run: >
+          dotnet test --no-build --configuration ${{ env.CONFIGURATION }}
+          --logger "trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ${{ github.workspace }}/TestResults
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: ${{ !cancelled() }}
+        with:
+          name: Test results
+          path: TestResults/**/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+
+      - name: Generate coverage report
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          reportgenerator \
+            -reports:'TestResults/**/coverage.cobertura.xml' \
+            -targetdir:coveragereport \
+            -reporttypes:'Html;Cobertura;MarkdownSummaryGithub;TextSummary'
+          cat coveragereport/Summary.txt
+          cat coveragereport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-report
+          path: coveragereport
+
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+
+  # ---------------------------------------------------------------------------
+  # Fail the build if any NuGet package (direct or transitive) has a known
+  # security advisory.
+  # ---------------------------------------------------------------------------
+  dependency-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Scan for vulnerable packages
+        shell: bash
+        run: |
+          echo "Scanning for vulnerable NuGet packages (direct + transitive)..."
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          if grep -q "github.com/advisories" vulnerable.txt; then
+            echo "::error::Vulnerable NuGet packages detected — see the log above."
+            exit 1
+          fi
+          echo "No known-vulnerable packages found."
+
+  # ---------------------------------------------------------------------------
+  # Static application security testing (SAST) with GitHub CodeQL.
+  # Results appear under the repo's Security → Code scanning tab.
+  # ---------------------------------------------------------------------------
+  codeql:
+    name: CodeQL security analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: manual
+
+      - name: Build
+        run: dotnet build --configuration ${{ env.CONFIGURATION }}
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:csharp'
