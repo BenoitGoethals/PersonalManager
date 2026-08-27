@@ -17,9 +17,13 @@ public class ServiceRegistrationTests
     [Fact]
     public void Resolves_ConsoleApp_WithAllDependenciesSatisfied()
     {
-        using var provider = BuildProvider();
+        // The console host registers its own presentation type on top of the core registrations.
+        using var provider = new ServiceCollection()
+            .AddPersonnelManager(Path.GetTempPath())
+            .AddSingleton<ConsoleApp>()
+            .BuildServiceProvider();
 
-        // If any dependency were missing/mis-registered, resolving ConsoleApp would throw.
+        // If any core dependency were missing/mis-registered, resolving ConsoleApp would throw.
         Assert.NotNull(provider.GetRequiredService<ConsoleApp>());
     }
 

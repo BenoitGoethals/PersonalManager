@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PersonnelManager.Desktop.ViewModels"
+        xmlns:dm="using:PersonnelManager.Domain"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="780" d:DesignHeight="500"
+        x:Class="PersonnelManager.Desktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="780" Height="500"
+        Title="Personnel Manager">
+
+    <DockPanel Margin="14">
+        <TextBlock DockPanel.Dock="Bottom" Margin="0,10,0,0" Foreground="Gray"
+                   Text="{Binding StatusMessage}" />
+
+        <Grid ColumnDefinitions="*,16,270">
+            <!-- Left: the list of people -->
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="Personnel" FontSize="20" FontWeight="Bold"
+                           Margin="0,0,0,10" />
+                <ListBox ItemsSource="{Binding People}" SelectedItem="{Binding SelectedPerson}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="dm:PersonalDto">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Surname}" />
+                                <TextBlock Text="·" Foreground="Gray" />
+                                <TextBlock Text="{Binding Status}" Foreground="Gray" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <!-- Right: add / delete form -->
+            <StackPanel Grid.Column="2" Spacing="8">
+                <TextBlock Text="Add person" FontSize="16" FontWeight="Bold" />
+                <TextBox Watermark="Name" Text="{Binding Name}" />
+                <TextBox Watermark="Surname" Text="{Binding Surname}" />
+                <TextBox Watermark="Address" Text="{Binding Address}" />
+                <TextBox Watermark="Phone" Text="{Binding Phone}" />
+                <ComboBox HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding Statuses}"
+                          SelectedItem="{Binding SelectedStatus}" />
+                <Button Content="Add" HorizontalAlignment="Stretch" Command="{Binding AddCommand}" />
+
+                <Separator Margin="0,6" />
+
+                <Button Content="Delete selected" HorizontalAlignment="Stretch" Command="{Binding DeleteCommand}" />
+                <Button Content="Refresh" HorizontalAlignment="Stretch" Command="{Binding LoadCommand}" />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+
+</Window>

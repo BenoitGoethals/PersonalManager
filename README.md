@@ -1,15 +1,18 @@
 # PersonnelManager & LogAnalyzer
 
-A two-project **.NET 10 / C# 14** solution built as a hands-on tour of modern C# and clean
-application design.
+A **.NET 10 / C# 14** solution built as a hands-on tour of modern C# and clean application design.
+The core is a class library shared by **two interchangeable front-ends** — a console app and an
+**Avalonia** desktop app — plus a separate log-watching utility.
 
 | Project | What it is |
 |---|---|
-| **PersonnelManager** | A layered, SOLID, **service-based** in-memory CRUD app for managing people, with validation, JSON file persistence, and cross-cutting logging. |
-| **LogAnalyzer** | A console tool that **watches a folder** for new/changed `.log` files, summarizes them by severity, and can generate sample logs for testing. |
+| **PersonnelManager** (Core library) | Layered, SOLID, **service-based** CRUD for managing people: domain, use cases, validation, logging decorators, and a repository that runs **in-memory or on PostgreSQL via EF Core**. |
+| **PersonnelManager.Console** | A console/terminal front-end over the core. |
+| **PersonnelManager.Desktop** | An **Avalonia UI (MVVM)** desktop front-end over the same core. |
+| **LogAnalyzer** | A console tool that **watches a folder** for new/changed `.log` files, summarizes them by severity, and generates sample logs for testing. |
 
-Both are console apps wired with **dependency injection** (`Microsoft.Extensions.DependencyInjection`).
-There are two xUnit test projects with **65 passing tests** between them.
+Everything is wired with **dependency injection** (`Microsoft.Extensions.DependencyInjection`).
+Three xUnit test projects hold **70 passing tests**.
 
 ---
 
@@ -33,22 +36,24 @@ There are two xUnit test projects with **65 passing tests** between them.
 
 ## Overview
 
-**PersonnelManager** keeps a list of people in memory and exposes create / read / update / delete
-through an interactive console menu. It is deliberately structured as a small **Clean Architecture**
-app so that each concern is isolated and testable:
+**PersonnelManager** manages a list of people with create / read / update / delete. It is
+deliberately structured as **Clean Architecture** so each concern is isolated and testable:
 
 - the **domain** owns the entity and its rules,
 - the **application** layer owns the use cases (a single `PersonnelService`) behind abstractions,
-- the **infrastructure** layer supplies concrete implementations (in-memory store, JSON backup, file logger),
-- the **presentation** layer is a console UI that depends only on abstractions.
+- the **infrastructure** layer supplies implementations (in-memory *or* EF Core / PostgreSQL store, JSON backup, file logger),
+- **presentation is separate**: two host projects (console, Avalonia) each depend only on the core abstractions.
 
-Cross-cutting concerns (logging) are added with the **Decorator pattern**, so no use-case code is
-touched to gain logging.
+The core is a **class library** with no dependency on any UI. Each front-end has its own tiny
+composition root that registers the shared core (`AddPersonnelManager`) plus its own presentation
+types. Swapping the store (in-memory ↔ PostgreSQL) is one branch in that registration; nothing above
+infrastructure changes. Cross-cutting logging is added with the **Decorator pattern**, so no use-case
+code is touched to gain it.
 
-**LogAnalyzer** is a separate utility that reads the exact log format PersonnelManager's `FileLogger`
-produces (`yyyy-MM-dd HH:mm:ss.fff [Level] message`). It parses log lines tolerantly, counts them by
-level, reports error samples and time spans, and uses a debounced `FileSystemWatcher` to re-analyze
-files as they change.
+**LogAnalyzer** reads the exact log format PersonnelManager's `FileLogger` produces
+(`yyyy-MM-dd HH:mm:ss.fff [Level] message`), parses lines tolerantly, counts them by level, reports
+error samples and time spans, and uses a debounced `FileSystemWatcher` to re-analyze files as they
+change.
 
 ---
 
@@ -56,27 +61,31 @@ files as they change.
 
 ```
 PersonnelManager.sln
-├── PersonnelManager/                 # main CRUD app
+├── PersonnelManager/                 # CORE class library (no UI dependency)
 │   ├── domain/                       # entity, DTO, enum, IEntity  (no dependencies)
 │   ├── application/
 │   │   ├── abstractions/             # interfaces, Result<T>, decorators
 │   │   └── personnel/                # PersonnelService, validator, mapping
-│   ├── infrastructure/               # in-memory repo, JSON backup, file logger
-│   ├── presentation/                 # ConsoleApp + display extensions
-│   ├── composition/                  # DI registration (AddPersonnelManager)
-│   └── Program.cs                    # composition root (builds the container)
-├── PersonnelManager.Tests/           # 54 xUnit tests
-├── LogAnalyzer/                      # log-watching utility
-│   ├── Domain/                       # LogLevel, LogEntry, LogSummary
-│   ├── Abstractions.cs               # ILogFileAnalyzer, ISampleLogGenerator, ISummaryWriter
-│   ├── LogLineParser.cs              # pure static parser
-│   ├── LogFileAnalyzer.cs
-│   ├── SampleLogGenerator.cs
-│   ├── ConsoleSummaryWriter.cs
-│   ├── FolderLogWatcher.cs
-│   ├── AnalyzerApp.cs                # command handlers (injected services)
-│   ├── ServiceCollectionExtensions.cs
-│   └── Program.cs                    # CLI dispatch (builds the container)
+│   ├── infrastructure/
+│   │   ├── persistence/              # EF Core: DbContext, EfRepository<T>, EfPersonalRepository
+│   │   ├── InMemoryRepository / InMemoryPersonalRepository
+│   │   ├── JsonPersonnelBackup, FileLogger
+│   ├── composition/                  # AddPersonnelManager (core DI registration)
+│   └── Migrations/                   # EF Core migration (InitialCreate)
+├── PersonnelManager.Console/         # console FRONT-END → refs Core
+│   ├── ConsoleApp.cs, PersonnelDisplayExtensions.cs
+│   └── Program.cs                    # console composition root
+├── PersonnelManager.Desktop/         # Avalonia (MVVM) FRONT-END → refs Core
+│   ├── ViewModels/MainViewModel.cs
+│   ├── Views/MainWindow.axaml (+ .cs)
+│   ├── App.axaml.cs                  # desktop composition root
+│   └── Program.cs
+├── PersonnelManager.Tests/           # 56 xUnit tests (refs Core + Console)
+├── PersonnelManager.Desktop.Tests/   # 3 view-model tests
+├── LogAnalyzer/                      # log-watching utility (DI-wired)
+│   ├── Domain/, Abstractions.cs, LogLineParser.cs, LogFileAnalyzer.cs
+│   ├── SampleLogGenerator.cs, ConsoleSummaryWriter.cs, FolderLogWatcher.cs
+│   ├── AnalyzerApp.cs, ServiceCollectionExtensions.cs, Program.cs
 └── LogAnalyzer.Tests/                # 11 xUnit tests
 ```
 
@@ -88,17 +97,30 @@ PersonnelManager.sln
 # Build everything
 dotnet build
 
-# Run all tests (60)
+# Run all tests (70)
 dotnet test
 
-# Run the CRUD app (interactive menu; also accepts commands: find <term>, delete <id>, help)
-dotnet run --project PersonnelManager
+# CRUD app — pick a front-end (both share the same core):
+dotnet run --project PersonnelManager.Console   # terminal menu (find <term>, delete <id>, help)
+dotnet run --project PersonnelManager.Desktop   # Avalonia desktop window (needs a desktop session)
 
 # Log analyzer
 dotnet run --project LogAnalyzer -- generate test-logs 10   # write 10 sample .log files
 dotnet run --project LogAnalyzer -- analyze test-logs/auth-01.log
 dotnet run --project LogAnalyzer -- watch  test-logs        # analyze, then watch for changes
 dotnet run --project LogAnalyzer -- demo                    # self-contained: generate + watch + inject changes
+```
+
+### Using PostgreSQL instead of the in-memory store
+
+Both CRUD front-ends read a connection string from the `PERSONNEL_DB` environment variable. Set it
+and they store people in PostgreSQL via EF Core; leave it unset and they use the in-memory store.
+The secret stays in your environment — never in source.
+
+```bash
+export PERSONNEL_DB="Host=<host>;Database=personnel;Username=<user>;Password=<secret>"
+dotnet ef database update --project PersonnelManager   # apply the InitialCreate migration
+dotnet run --project PersonnelManager.Console          # now backed by PostgreSQL
 ```
 
 ---
@@ -109,12 +131,17 @@ dotnet run --project LogAnalyzer -- demo                    # self-contained: ge
 
 Dependencies point **inward** — outer layers depend on inner abstractions, never the reverse.
 
+Dependencies point **inward**. The two front-ends (Console, Avalonia) live *outside* the core
+library and depend only on its application abstractions.
+
 ```mermaid
 flowchart TD
-    P[Presentation<br/>ConsoleApp] --> A
-    I[Infrastructure<br/>InMemoryRepository · JsonPersonnelBackup · FileLogger] -. implements .-> A
-    A[Application<br/>PersonnelService · abstractions · Result&lt;T&gt;] --> D[Domain<br/>Personal · PersonalDto · EmploymentStatus]
-    P --> D
+    C[PersonnelManager.Console<br/>ConsoleApp] --> A
+    V[PersonnelManager.Desktop<br/>MainViewModel] --> A
+    I[Infrastructure<br/>InMemory / EF Core · JsonPersonnelBackup · FileLogger] -. implements .-> A
+    A[Application<br/>IPersonnelService · abstractions · Result&lt;T&gt;] --> D[Domain<br/>Personal · PersonalDto · EmploymentStatus]
+    C --> D
+    V --> D
     I --> D
 
     classDef domain fill:#0e7490,stroke:#083344,color:#fff;
@@ -124,18 +151,22 @@ flowchart TD
     class D domain
     class A app
     class I infra
-    class P pres
+    class C pres
+    class V pres
 ```
 
 Wiring is done with **dependency injection** (`Microsoft.Extensions.DependencyInjection`).
-`AddPersonnelManager` (in `composition/`) registers each abstraction's implementation — including
-the two logging **decorators**, registered as factories that wrap the concrete service and backup.
-`Program.cs` is then tiny: build the `ServiceProvider`, resolve `ConsoleApp`, run. It's the only
-place that names concrete types, and the container resolves each constructor's dependencies for it.
+`AddPersonnelManager` (in the core's `composition/`) registers the shared services — repository
+(in-memory or EF Core, chosen by connection string) and the two logging **decorators**, registered
+as factories that wrap the concrete service and backup. **Each front-end has its own composition
+root** (`Program.cs` for the console, `App.axaml.cs` for Avalonia) that calls `AddPersonnelManager`
+and then registers its own presentation type (`ConsoleApp` / `MainViewModel`). The core library
+names no UI type.
 
 ### Class diagram — domain & persistence
 
-Shows the generic repository and how the `Personal` store is just a one-line specialization.
+Shows the generic repository and its two implementations — the in-memory store and the EF Core /
+PostgreSQL store — each closed over `Personal` in a one-line specialization.
 
 ```mermaid
 classDiagram
@@ -180,12 +211,23 @@ classDiagram
       -ConcurrentDictionary store
     }
     class InMemoryPersonalRepository
+    class EfRepository~TEntity~ {
+      -IDbContextFactory factory
+    }
+    class EfPersonalRepository
+    class PersonnelDbContext {
+      +DbSet~Personal~ Personnel
+    }
 
     IEntity <|.. Personal
     IRepository~TEntity~ <|-- IPersonalRepository
     IRepository~TEntity~ <|.. InMemoryRepository~TEntity~
     InMemoryRepository~TEntity~ <|-- InMemoryPersonalRepository
     IPersonalRepository <|.. InMemoryPersonalRepository
+    IRepository~TEntity~ <|.. EfRepository~TEntity~
+    EfRepository~TEntity~ <|-- EfPersonalRepository
+    IPersonalRepository <|.. EfPersonalRepository
+    EfRepository~TEntity~ ..> PersonnelDbContext : uses
     Personal --> EmploymentStatus
     PersonalDto --> EmploymentStatus
 ```
@@ -400,6 +442,12 @@ This solution was built lesson-by-lesson; nearly every construct maps to a real 
 - **Dependency injection** (`Microsoft.Extensions.DependencyInjection`) — a `ServiceCollection`
   describes the graph and the container resolves each constructor's dependencies; decorators are
   registered as factory wrappers. Wiring is verified by tests.
+- **Presentation / core separation** — the core is a UI-agnostic class library shared by two
+  front-ends (**Console** and **Avalonia MVVM**); each has its own composition root.
+- **EF Core + PostgreSQL** (`Npgsql`) behind the repository abstraction, selected by connection
+  string; the in-memory store is the default. An `InitialCreate` migration is included.
+- **MVVM** with CommunityToolkit — `MainViewModel` depends only on `IPersonnelService`, so the UI
+  logic is unit-tested with no GUI.
 - **File watching** with `FileSystemWatcher` (debouncing, shared-read handles).
 
 ---
@@ -407,12 +455,13 @@ This solution was built lesson-by-lesson; nearly every construct maps to a real 
 ## Testing
 
 ```bash
-dotnet test          # runs both test projects
+dotnet test          # runs all three test projects
 ```
 
 | Test project | Tests | Focus |
 |---|---|---|
-| `PersonnelManager.Tests` | 54 | service, validator, repository, backup, logging decorators, extensions, console flows, DI registration |
+| `PersonnelManager.Tests` | 56 | service, validator, repository, backup, logging decorators, extensions, console flows, DI registration (in-memory + EF paths) |
+| `PersonnelManager.Desktop.Tests` | 3 | `MainViewModel` add / delete / validation — no GUI |
 | `LogAnalyzer.Tests` | 11 | line parser (valid / aliases / malformed), file analyzer (counts, time span, errors), DI registration |
 
 Tests use the real in-memory implementations as honest test doubles where possible, plus small

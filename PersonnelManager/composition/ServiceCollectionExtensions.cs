@@ -4,14 +4,13 @@ using PersonnelManager.Application.Abstractions;
 using PersonnelManager.Application.Personnel;
 using PersonnelManager.Infrastructure;
 using PersonnelManager.Infrastructure.Persistence;
-using PersonnelManager.Presentation;
 
 namespace PersonnelManager.Composition;
 
 /// <summary>
-/// Registers every service in the DI container. This replaces the hand-wired composition root:
-/// instead of `new`-ing the whole object graph by hand, we declare each abstraction's
-/// implementation and let the container resolve constructor dependencies for us.
+/// Registers the CORE services (repository, logger, validator, service, backup) in the DI container.
+/// This lives in the Core library so every front-end (Console, Avalonia, …) shares one wiring.
+/// Each UI host then registers its OWN presentation types on top of this.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
@@ -55,9 +54,8 @@ public static class ServiceCollectionExtensions
                     Path.Combine(dataDirectory, "personnel.json")),
                 sp.GetRequiredService<IAppLogger>()));
 
-        // Presentation — its (IPersonnelService, IPersonnelBackup) constructor is satisfied above.
-        services.AddSingleton<ConsoleApp>();
-
+        // Presentation types are registered by each UI host, not here — that keeps the Core
+        // library free of any dependency on a specific front-end.
         return services;
     }
 }

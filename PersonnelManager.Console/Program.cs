@@ -18,6 +18,7 @@ var connectionString = Environment.GetEnvironmentVariable("PERSONNEL_DB");
 
 var services = new ServiceCollection();
 services.AddPersonnelManager(dataDirectory: AppContext.BaseDirectory, connectionString: connectionString);
+services.AddSingleton<ConsoleApp>(); // presentation registration lives with the console host
 
 await using var provider = services.BuildServiceProvider();
 
