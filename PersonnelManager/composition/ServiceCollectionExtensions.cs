@@ -1,7 +1,9 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PersonnelManager.Application.Abstractions;
 using PersonnelManager.Application.Personnel;
+using PersonnelManager.Domain;
 using PersonnelManager.Infrastructure;
 using PersonnelManager.Infrastructure.Persistence;
 
@@ -34,8 +36,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IAppLogger>(_ => new FileLogger(Path.Combine(dataDirectory, "personnel.log")));
 
-        // Application
-        services.AddSingleton<IPersonalValidator, PersonalValidator>();
+        // Application — the FluentValidation rule set. Validators are stateless and thread-safe,
+        // so a singleton is fine and lets the container inject IValidator<Personal> anywhere.
+        services.AddSingleton<IValidator<Personal>, PersonalValidator>();
 
         // The service, exposed through its logging decorator. We register the concrete
         // PersonnelService, then register IPersonnelService as a factory that wraps it —

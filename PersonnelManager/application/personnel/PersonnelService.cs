@@ -1,3 +1,4 @@
+using FluentValidation;
 using PersonnelManager.Application.Abstractions;
 using PersonnelManager.Domain;
 
@@ -7,7 +8,7 @@ namespace PersonnelManager.Application.Personnel;
 /// The concrete use cases. Depends on the repository and validator abstractions, injected via the
 /// primary constructor. Each method is one operation that previously lived in its own handler.
 /// </summary>
-public sealed class PersonnelService(IPersonalRepository repository, IPersonalValidator validator)
+public sealed class PersonnelService(IPersonalRepository repository, IValidator<Personal> validator)
     : IPersonnelService
 {
     public async Task<Result<PersonalDto>> CreateAsync(
@@ -22,9 +23,10 @@ public sealed class PersonnelService(IPersonalRepository repository, IPersonalVa
             Status = request.Status,
         };
 
-        var errors = validator.Validate(personal);
-        if (errors.Count > 0)
-            return Result<PersonalDto>.Failure(string.Join(" ", errors));
+        var validation = validator.Validate(personal);
+        if (!validation.IsValid)
+            return Result<PersonalDto>.Failure(
+                string.Join(" ", validation.Errors.Select(failure => failure.ErrorMessage)));
 
         await repository.AddAsync(personal, cancellationToken);
         return Result<PersonalDto>.Success(personal.ToDto());

@@ -1,3 +1,4 @@
+using FluentValidation.TestHelper;
 using PersonnelManager.Application.Personnel;
 using PersonnelManager.Domain;
 
@@ -10,47 +11,48 @@ public class PersonalValidatorTests
     [Fact]
     public void ValidPerson_HasNoErrors()
     {
-        var errors = _validator.Validate(new Personal { Name = "Ada", Surname = "Lovelace" });
+        var result = _validator.TestValidate(new Personal { Name = "Ada", Surname = "Lovelace" });
 
-        Assert.Empty(errors);
+        result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
     public void MissingNameAndSurname_FailsTheNameRule()
     {
-        var errors = _validator.Validate(new Personal()); // no name, no surname
+        var result = _validator.TestValidate(new Personal()); // no name, no surname
 
-        Assert.Contains(errors, e => e.Contains("name or a surname"));
+        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("name or a surname"));
     }
 
     [Fact]
     public void OverlongPhone_FailsThePhoneRule()
     {
-        var errors = _validator.Validate(new Personal
+        var result = _validator.TestValidate(new Personal
         {
             Name = "Ada", Phone = new string('9', 40),
         });
 
-        Assert.Contains(errors, e => e.Contains("Phone number is too long"));
+        result.ShouldHaveValidationErrorFor(p => p.Phone)
+            .WithErrorMessage("Phone number is too long.");
     }
 
     [Fact]
     public void TerminatedWithNoName_FailsThatRule()
     {
-        var errors = _validator.Validate(new Personal
+        var result = _validator.TestValidate(new Personal
         {
             Surname = "Turing", Status = EmploymentStatus.Terminated,
         });
 
-        Assert.Contains(errors, e => e.Contains("terminated person"));
+        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("terminated person"));
     }
 
     [Fact]
     public void MultipleBrokenRules_ReturnAllMessages()
     {
-        // No name/surname AND an over-long phone → two independent rule delegates fire.
-        var errors = _validator.Validate(new Personal { Phone = new string('9', 40) });
+        // No name/surname AND an over-long phone → two independent rules fire.
+        var result = _validator.TestValidate(new Personal { Phone = new string('9', 40) });
 
-        Assert.Equal(2, errors.Count);
+        Assert.Equal(2, result.Errors.Count);
     }
 }
