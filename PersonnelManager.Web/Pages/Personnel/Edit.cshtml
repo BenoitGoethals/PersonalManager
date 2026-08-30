@@ -1,0 +1,41 @@
+@page "{id:guid}"
+@model PersonnelManager.Web.Pages.Personnel.EditModel
+@{
+    ViewData["Title"] = "Edit person";
+}
+
+<h1>Edit person</h1>
+
+<form method="post" class="card">
+    <div asp-validation-summary="All" class="validation"></div>
+
+    <div class="field">
+        <label asp-for="Input.Name"></label>
+        <input asp-for="Input.Name"/>
+        <span asp-validation-for="Input.Name" class="validation"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Input.Surname"></label>
+        <input asp-for="Input.Surname"/>
+        <span asp-validation-for="Input.Surname" class="validation"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Input.Address"></label>
+        <input asp-for="Input.Address"/>
+        <span asp-validation-for="Input.Address" class="validation"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Input.Phone"></label>
+        <input asp-for="Input.Phone"/>
+        <span asp-validation-for="Input.Phone" class="validation"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Input.Status"></label>
+        <select asp-for="Input.Status" asp-items="Html.GetEnumSelectList<EmploymentStatus>()"></select>
+    </div>
+
+    <div class="actions">
+        <button type="submit" class="btn">Save</button>
+        <a class="btn secondary" asp-page="/Personnel/Index">Cancel</a>
+    </div>
+</form>

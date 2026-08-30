@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>14</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <!--
+      A standalone ASP.NET Core Razor Pages front-end that consumes PersonnelManager.Api over HTTP.
+      It deliberately does NOT reference the API or core projects — it is a true HTTP client, with its
+      own small view/DTO models (see ApiClient/Models.cs). The API base URL comes from configuration.
+    -->
+
+</Project>

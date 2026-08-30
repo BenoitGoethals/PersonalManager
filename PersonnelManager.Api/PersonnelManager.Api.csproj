@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>14</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <!-- Emit an XML doc file so Swashbuckle can surface the endpoint summaries in the OpenAPI document. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- JWT bearer authentication. -->
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+        <!-- Swashbuckle generates the OpenAPI document and serves the interactive Swagger UI. -->
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+        <!-- Request-DTO validation at the API boundary (the domain has its own rules in the core lib). -->
+        <PackageReference Include="FluentValidation" Version="12.1.1" />
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The API is a thin HTTP host over the existing core: domain, application service, validation, EF store. -->
+        <ProjectReference Include="..\PersonnelManager\PersonnelManager.csproj" />
+    </ItemGroup>
+
+</Project>

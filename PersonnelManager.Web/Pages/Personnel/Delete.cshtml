@@ -1,0 +1,20 @@
+@page "{id:guid}"
+@model PersonnelManager.Web.Pages.Personnel.DeleteModel
+@{
+    ViewData["Title"] = "Delete person";
+}
+
+<h1>Delete person</h1>
+
+<div class="card">
+    <p>Are you sure you want to delete this person?</p>
+    <p>
+        <strong>@Model.Person?.Name @Model.Person?.Surname</strong><br/>
+        <span class="muted">@Model.Person?.Phone &middot; @Model.Person?.Status</span>
+    </p>
+
+    <form method="post" class="actions">
+        <button type="submit" class="btn danger">Delete</button>
+        <a class="btn secondary" asp-page="/Personnel/Index">Cancel</a>
+    </form>
+</div>
