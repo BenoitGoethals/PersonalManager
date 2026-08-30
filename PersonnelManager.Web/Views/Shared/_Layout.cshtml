@@ -10,19 +10,19 @@
 <body>
 <header>
     <nav class="nav">
-        <a class="brand" asp-page="/Personnel/Index">Personnel Manager</a>
+        <a class="brand" asp-controller="Personnel" asp-action="Index">Personnel Manager</a>
         <div class="spacer"></div>
         @if (User.Identity?.IsAuthenticated == true)
         {
-            <a asp-page="/Personnel/Index">People</a>
+            <a asp-controller="Personnel" asp-action="Index">People</a>
             <span class="who">@User.Identity!.Name @(User.IsInRole("Admin") ? "(Admin)" : "")</span>
-            <form method="post" asp-page="/Account/Logout" class="inline">
+            <form method="post" asp-controller="Account" asp-action="Logout" class="inline">
                 <button type="submit" class="link-btn">Log out</button>
             </form>
         }
         else
         {
-            <a asp-page="/Account/Login">Log in</a>
+            <a asp-controller="Account" asp-action="Login">Log in</a>
         }
     </nav>
 </header>

@@ -26,15 +26,14 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
-// --- Razor Pages (the whole /Personnel area requires a signed-in user) ----
-builder.Services
-    .AddRazorPages(options => options.Conventions.AuthorizeFolder("/Personnel"));
+// --- MVC (PersonnelController requires a signed-in user via [Authorize]) --
+builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
+    app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
@@ -44,6 +43,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapRazorPages();
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

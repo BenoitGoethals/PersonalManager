@@ -1,52 +1,39 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using PersonnelManager.Web.ApiClient;
+using PersonnelManager.Web.Models;
 
-namespace PersonnelManager.Web.Pages.Account;
+namespace PersonnelManager.Web.Controllers;
 
 [AllowAnonymous]
-public sealed class LoginModel(IPersonnelApiClient api) : PageModel
+public sealed class AccountController(IPersonnelApiClient api) : Controller
 {
-    [BindProperty]
-    public InputModel Input { get; set; } = new();
+    [HttpGet]
+    public IActionResult Login() => View(new LoginViewModel());
 
-    public sealed class InputModel
-    {
-        [Required]
-        public string Username { get; set; } = string.Empty;
-
-        [Required]
-        public string Password { get; set; } = string.Empty;
-    }
-
-    public void OnGet()
-    {
-    }
-
-    public async Task<IActionResult> OnPostAsync(string? returnUrl, CancellationToken cancellationToken)
+    [HttpPost]
+    public async Task<IActionResult> Login(LoginViewModel input, string? returnUrl, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
-            return Page();
+            return View(input);
 
         TokenResponse token;
         try
         {
-            token = await api.LoginAsync(Input.Username, Input.Password, cancellationToken);
+            token = await api.LoginAsync(input.Username, input.Password, cancellationToken);
         }
         catch (ApiException ex) when (ex.IsUnauthorized)
         {
             ModelState.AddModelError(string.Empty, "Invalid username or password.");
-            return Page();
+            return View(input);
         }
         catch (HttpRequestException)
         {
             ModelState.AddModelError(string.Empty, "The API is unreachable. Is PersonnelManager.Api running?");
-            return Page();
+            return View(input);
         }
 
         // Build the local auth cookie from the JWT's claims, stashing the raw token so the
@@ -54,7 +41,7 @@ public sealed class LoginModel(IPersonnelApiClient api) : PageModel
         var claims = new List<Claim> { new(BearerTokenHandler.AccessTokenClaim, token.AccessToken) };
         claims.AddRange(JwtReader.ReadClaims(token.AccessToken));
         if (!claims.Any(c => c.Type == ClaimTypes.Name))
-            claims.Add(new Claim(ClaimTypes.Name, Input.Username));
+            claims.Add(new Claim(ClaimTypes.Name, input.Username));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(
@@ -64,4 +51,16 @@ public sealed class LoginModel(IPersonnelApiClient api) : PageModel
 
         return LocalRedirect(returnUrl ?? "/Personnel/Index");
     }
+
+    [HttpPost]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToAction("Login");
+    }
+
+    // A GET to /Account/Logout just sends the user home rather than erroring.
+    [HttpGet]
+    [ActionName("Logout")]
+    public IActionResult LogoutGet() => RedirectToAction("Index", "Personnel");
 }

@@ -1,6 +1,6 @@
 # PersonnelManager.Web
 
-A standalone ASP.NET Core **Razor Pages** front-end that consumes **PersonnelManager.Api** over HTTP.
+A standalone ASP.NET Core **MVC** front-end that consumes **PersonnelManager.Api** over HTTP.
 It is a true API client: it does **not** reference the API or core projects — it talks to the REST
 endpoints through a typed `HttpClient`, with its own small view models.
 
@@ -8,15 +8,15 @@ endpoints through a typed `HttpClient`, with its own small view models.
 
 - **Typed client** — `ApiClient/PersonnelApiClient.cs` wraps the REST calls (login, list, get, create,
   update, delete, backup) and turns non-success responses into `ApiException` (with per-field errors).
-- **Auth** — the login page posts credentials to `POST /api/auth/login`, then stores the returned JWT
-  (plus the role claims decoded from it) in a **cookie**. `ApiClient/BearerTokenHandler.cs` reads that
-  token from the signed-in user and attaches it as `Authorization: Bearer …` on every API call.
-- **Authorization** — the whole `/Personnel` folder requires a signed-in user; the Delete page and the
-  "Back up" action are `Admin`-only (and the API enforces the same regardless of the UI).
+- **Auth** — `AccountController.Login` posts credentials to `POST /api/auth/login`, then stores the
+  returned JWT (plus the role claims decoded from it) in a **cookie**. `ApiClient/BearerTokenHandler.cs`
+  reads that token from the signed-in user and attaches it as `Authorization: Bearer …` on every API call.
+- **Authorization** — `PersonnelController` requires a signed-in user (`[Authorize]`); its `Delete`
+  actions and the "Back up" action are `Admin`-only (and the API enforces the same regardless of the UI).
 - **Validation** — client-side data annotations plus the API's own validation errors, surfaced in the
-  page's validation summary.
+  view's validation summary.
 
-## Pages
+## Routes
 
 | Route                       | Purpose                                        |
 |-----------------------------|------------------------------------------------|

@@ -1,0 +1,19 @@
+@model PersonView
+@{
+    ViewData["Title"] = "Delete person";
+}
+
+<h1>Delete person</h1>
+
+<div class="card">
+    <p>Are you sure you want to delete this person?</p>
+    <p>
+        <strong>@Model.Name @Model.Surname</strong><br/>
+        <span class="muted">@Model.Phone &middot; @Model.Status</span>
+    </p>
+
+    <form method="post" class="actions">
+        <button type="submit" class="btn danger">Delete</button>
+        <a class="btn secondary" asp-action="Index">Cancel</a>
+    </form>
+</div>

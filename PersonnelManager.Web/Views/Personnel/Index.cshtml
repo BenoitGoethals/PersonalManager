@@ -1,5 +1,4 @@
-@page
-@model PersonnelManager.Web.Pages.Personnel.IndexModel
+@model PersonnelIndexViewModel
 @{
     ViewData["Title"] = "People";
 }
@@ -13,19 +12,19 @@
 
 <form method="get" class="toolbar">
     <div class="field">
-        <label asp-for="Name">Search name</label>
-        <input asp-for="Name" placeholder="name or surname"/>
+        <label for="Name">Search name</label>
+        <input id="Name" name="Name" value="@Model.Name" placeholder="name or surname"/>
     </div>
     <div class="field">
-        <label asp-for="Status">Status</label>
-        <select asp-for="Status" asp-items="Html.GetEnumSelectList<EmploymentStatus>()">
+        <label for="Status">Status</label>
+        <select id="Status" name="Status" asp-items="Html.GetEnumSelectList<EmploymentStatus>()">
             <option value="">(any)</option>
         </select>
     </div>
     <button type="submit" class="btn secondary">Filter</button>
-    <a class="btn secondary" asp-page="/Personnel/Index">Reset</a>
+    <a class="btn secondary" asp-action="Index">Reset</a>
     <div class="spacer" style="flex:1"></div>
-    <a class="btn" asp-page="/Personnel/Create">+ New person</a>
+    <a class="btn" asp-action="Create">+ New person</a>
 </form>
 
 <table>
@@ -53,10 +52,10 @@
             <td>@person.Phone</td>
             <td><span class="badge">@person.Status</span></td>
             <td class="actions">
-                <a class="btn secondary" asp-page="/Personnel/Edit" asp-route-id="@person.Id">Edit</a>
+                <a class="btn secondary" asp-action="Edit" asp-route-id="@person.Id">Edit</a>
                 @if (User.IsInRole("Admin"))
                 {
-                    <a class="btn danger" asp-page="/Personnel/Delete" asp-route-id="@person.Id">Delete</a>
+                    <a class="btn danger" asp-action="Delete" asp-route-id="@person.Id">Delete</a>
                 }
             </td>
         </tr>
@@ -66,7 +65,7 @@
 
 @if (User.IsInRole("Admin"))
 {
-    <form method="post" asp-page-handler="Backup" style="margin-top:1rem">
+    <form method="post" asp-action="Backup" style="margin-top:1rem">
         <button type="submit" class="btn secondary">Back up to JSON</button>
     </form>
 }
