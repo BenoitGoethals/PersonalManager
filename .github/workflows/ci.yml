@@ -7,6 +7,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Cancel an in-progress run when a newer commit is pushed to the same branch/PR.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -20,6 +25,9 @@ env:
 jobs:
   # ---------------------------------------------------------------------------
   # Build, run tests, publish a test report, and produce a coverage report.
+  # Covers every project in the solution — core library, Console/Desktop apps,
+  # the REST API + its integration tests, and the Web front-end + its integration
+  # tests (both spin up in-memory hosts, so no database is needed on CI).
   # ---------------------------------------------------------------------------
   build-test:
     name: Build · Test · Coverage
@@ -66,6 +74,7 @@ jobs:
           reportgenerator \
             -reports:'TestResults/**/coverage.cobertura.xml' \
             -targetdir:coveragereport \
+            -assemblyfilters:'-*.Tests' \
             -reporttypes:'Html;Cobertura;MarkdownSummaryGithub;TextSummary'
           cat coveragereport/Summary.txt
           cat coveragereport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"

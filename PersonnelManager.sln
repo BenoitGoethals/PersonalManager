@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonnelManager.Api.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonnelManager.Web", "PersonnelManager.Web\PersonnelManager.Web.csproj", "{35B28E04-C165-4535-A279-19A71F4FE036}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonnelManager.Web.Tests", "PersonnelManager.Web.Tests\PersonnelManager.Web.Tests.csproj", "{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -150,6 +152,18 @@ Global
 		{35B28E04-C165-4535-A279-19A71F4FE036}.Release|x64.Build.0 = Release|Any CPU
 		{35B28E04-C165-4535-A279-19A71F4FE036}.Release|x86.ActiveCfg = Release|Any CPU
 		{35B28E04-C165-4535-A279-19A71F4FE036}.Release|x86.Build.0 = Release|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Debug|x64.Build.0 = Debug|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Debug|x86.Build.0 = Debug|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Release|x64.ActiveCfg = Release|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Release|x64.Build.0 = Release|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Release|x86.ActiveCfg = Release|Any CPU
+		{D6D8EC45-B74B-4D7B-BB8C-9795B14C83A2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

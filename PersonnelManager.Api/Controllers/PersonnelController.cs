@@ -22,6 +22,7 @@ public sealed class PersonnelController(IPersonnelService service, IPersonnelBac
     /// <summary>List personnel, optionally filtered by status and/or a name fragment.</summary>
     /// <param name="status">Restrict to a single employment status.</param>
     /// <param name="name">Case-insensitive fragment matched against name or surname.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<PersonalDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PersonalDto>>> GetAll(
